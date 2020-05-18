@@ -102,3 +102,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+src/front-end/node_modules/
+src/laravel-api/vendor/

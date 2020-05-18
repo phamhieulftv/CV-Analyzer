@@ -1,0 +1,74 @@
+version: '2'
+services:
+    ##
+    # Autodiscovery : Consul
+    ##
+    autodiscovery:
+        build: ./autodiscovery/
+        mem_limit: 128m
+        expose:
+            - 53
+            - 8300
+            - 8301
+            - 8302
+            - 8400
+            - 8500
+        ports:
+            - 8500:8500
+        dns:
+            - 127.0.0.1
+
+    ##
+    # Battle Microservice
+    ##
+    microservice_laravel_api_fpm:
+        build: ./microservices/laravel-api/php-fpm/
+        volumes_from:
+            - source_laravel_api
+        links:
+            - autodiscovery
+        expose:
+            - 9000
+        environment:
+            - BACKEND=microservice-laravel-api-nginx
+            - CONSUL=autodiscovery
+
+    microservice_laravel_api_nginx:
+        build: ./microservices/laravel-api/nginx/
+        volumes_from:
+            - source_laravel_api
+        links:
+            - autodiscovery
+            - microservice_laravel_api_fpm
+        environment:
+            - BACKEND=microservice-laravel-api-fpm
+            - CONSUL=autodiscovery
+        ports:
+            - 8081:80
+            - 9091:9090
+
+    microservice_reactjs_nginx:
+        build: ./microservices/front-end/nginx/
+        volumes_from:
+            - source_front_end
+        links:
+            - autodiscovery
+        environment:
+            - BACKEND=microservice-laravel-api-fpm
+            - CONSUL=autodiscovery
+        ports:
+            - 8082:80
+            - 9092:9090
+    ##
+    # Source containers
+    ##
+    source_laravel_api:
+        image: nginx:stable
+        volumes:
+            - ./src/laravel-api:/var/www/html
+        command: "true"
+    source_front_end:
+        image: nginx:stable
+        volumes:
+            - ./src/front-end:/var/www/html
+        command: "true"
